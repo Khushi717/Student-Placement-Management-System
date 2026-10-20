@@ -31,4 +31,9 @@ describe('checkEligibility', () => {
     const r = checkEligibility({ studentProfile: {} }, job());
     expect(r.eligible).toBe(false);
   });
+  test('rejects placed student (BR-06 one-offer policy)', () => {
+    const r = checkEligibility(student({ placementStatus: 'PLACED' }), job());
+    expect(r.eligible).toBe(false);
+    expect(r.reasons[0]).toMatch(/already placed/i);
+  });
 });

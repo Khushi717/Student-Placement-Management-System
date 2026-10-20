@@ -120,17 +120,40 @@ describe('applications', () => {
 });
 
 describe('interview -> offer flow', () => {
-  test('schedule interview, create offer, student accepts', async () => {
+  test('schedule interview, create offer, student accepts and enforces BR-06 one-offer policy', async () => {
     const { company } = await approvedCompany();
-    const job = (await api().post('/api/jobs').set(auth(company.token)).send(jobBody()).expect(201)).body.data;
+    const job1 = (await api().post('/api/jobs').set(auth(company.token)).send(jobBody({ title: 'Role 1' })).expect(201)).body.data;
+    const job2 = (await api().post('/api/jobs').set(auth(company.token)).send(jobBody({ title: 'Role 2' })).expect(201)).body.data;
+    const job3 = (await api().post('/api/jobs').set(auth(company.token)).send(jobBody({ title: 'Role 3' })).expect(201)).body.data;
+
     const student = await registerStudent();
-    const app = (await api().post('/api/applications').set(auth(student.token)).send({ jobId: job._id }).expect(201)).body.data;
-    await api().patch(`/api/applications/${app._id}/status`).set(auth(company.token)).send({ status: 'SHORTLISTED' }).expect(200);
-    await api().post('/api/interviews').set(auth(company.token)).send({ applicationId: app._id, scheduledAt: futureISO(2), mode: 'ONLINE', location: 'https://meet.example.com/x' }).expect(201);
+    const app1 = (await api().post('/api/applications').set(auth(student.token)).send({ jobId: job1._id }).expect(201)).body.data;
+    const app2 = (await api().post('/api/applications').set(auth(student.token)).send({ jobId: job2._id }).expect(201)).body.data;
+
+    // Test student withdrawal on app2
+    await api().patch(`/api/applications/${app2._id}/withdraw`).set(auth(student.token)).expect(200);
+    const withdrawnApp = (await api().get(`/api/applications/${app2._id}`).set(auth(student.token)).expect(200)).body.data;
+    expect(withdrawnApp.status).toBe('WITHDRAWN');
+
+    // Progress app1
+    await api().patch(`/api/applications/${app1._id}/status`).set(auth(company.token)).send({ status: 'SHORTLISTED' }).expect(200);
+    await api().post('/api/interviews').set(auth(company.token)).send({ applicationId: app1._id, scheduledAt: futureISO(2), mode: 'ONLINE', location: 'https://meet.example.com/x' }).expect(201);
     expect((await api().get('/api/interviews/me').set(auth(student.token)).expect(200)).body.data).toHaveLength(1);
-    const offer = (await api().post('/api/offers').set(auth(company.token)).send({ applicationId: app._id, packageLPA: 12 }).expect(201)).body.data;
+
+    const offer = (await api().post('/api/offers').set(auth(company.token)).send({ applicationId: app1._id, packageLPA: 12 }).expect(201)).body.data;
     await api().patch(`/api/offers/${offer._id}/respond`).set(auth(company.token)).send({ response: 'ACCEPTED' }).expect(403);
     await api().patch(`/api/offers/${offer._id}/respond`).set(auth(student.token)).send({ response: 'ACCEPTED' }).expect(200);
     await api().patch(`/api/offers/${offer._id}/respond`).set(auth(student.token)).send({ response: 'DECLINED' }).expect(409);
+
+    // Verify application status is now PLACED
+    const finalApp = (await api().get(`/api/applications/${app1._id}`).set(auth(student.token)).expect(200)).body.data;
+    expect(finalApp.status).toBe('PLACED');
+
+    // Verify profile placementStatus is now PLACED
+    const me = (await api().get('/api/auth/me').set(auth(student.token)).expect(200)).body.data;
+    expect(me.user.studentProfile.placementStatus).toBe('PLACED');
+
+    // Verify PLACED student cannot apply to job3 (BR-06)
+    await api().post('/api/applications').set(auth(student.token)).send({ jobId: job3._id }).expect(400);
   });
 });

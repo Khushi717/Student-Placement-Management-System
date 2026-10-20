@@ -60,7 +60,12 @@ export default function JobDetailsPage() {
           <div className="card p-5 text-sm text-slate-600">
             <p className="text-lg font-semibold text-navy-700">{formatLPA(job.packageLPA)}</p>
             <p>{humanize(job.jobType)} · {job.openings} opening(s)</p>
-            <p className="mt-1">Deadline: <b>{formatDate(job.deadline)}</b></p>
+            <div className="mt-1 flex items-center justify-between">
+              <p>Deadline: <b>{formatDate(job.deadline)}</b></p>
+              {new Date(job.deadline) < new Date() && (
+                <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Deadline Passed</span>
+              )}
+            </div>
           </div>
           <div className="card p-5">
             {check.eligible
