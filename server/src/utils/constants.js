@@ -11,6 +11,8 @@ export const APPLICATION_STATUS = Object.freeze({
   SHORTLISTED: 'SHORTLISTED',
   INTERVIEW: 'INTERVIEW',
   SELECTED: 'SELECTED',
+  PLACED: 'PLACED',
+  WITHDRAWN: 'WITHDRAWN',
   REJECTED: 'REJECTED',
 });
 export const OFFER_STATUS = Object.freeze({ PENDING: 'PENDING', ACCEPTED: 'ACCEPTED', DECLINED: 'DECLINED' });
@@ -18,11 +20,13 @@ export const INTERVIEW_STATUS = Object.freeze({ SCHEDULED: 'SCHEDULED', COMPLETE
 export const INTERVIEW_MODES = ['ONLINE', 'ONSITE'];
 export const NOTIFICATION_TYPES = ['GENERAL', 'COMPANY', 'JOB', 'APPLICATION', 'INTERVIEW', 'OFFER'];
 
-// Allowed application status transitions (company/admin driven).
+// Allowed application status transitions (company/admin driven, plus student withdrawal/placement).
 export const APPLICATION_TRANSITIONS = Object.freeze({
-  APPLIED: ['SHORTLISTED', 'REJECTED'],
-  SHORTLISTED: ['INTERVIEW', 'REJECTED'],
+  APPLIED: ['SHORTLISTED', 'WITHDRAWN', 'REJECTED'],
+  SHORTLISTED: ['INTERVIEW', 'WITHDRAWN', 'REJECTED'],
   INTERVIEW: ['SELECTED', 'REJECTED'],
-  SELECTED: [],
+  SELECTED: ['PLACED', 'REJECTED'],
+  PLACED: [],
+  WITHDRAWN: [],
   REJECTED: [],
 });

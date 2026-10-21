@@ -1,4 +1,6 @@
 import { Offer } from './offer.model.js';
+import { Application } from '../applications/application.model.js';
+import { User } from '../users/user.model.js';
 import { getAuthorizedApplication } from '../applications/application.service.js';
 import { requireCompanyForUser } from '../companies/company.service.js';
 import { ApiError } from '../../utils/ApiError.js';
@@ -65,6 +67,67 @@ export async function respond(student, id, response) {
   offer.status = response;
   offer.respondedAt = new Date();
   await offer.save();
+
+  const currentApp = await Application.findById(offer.application);
+
+  if (response === OFFER_STATUS.ACCEPTED) {
+    // 1. Mark accepted application as PLACED
+    if (currentApp) {
+      currentApp.status = APPLICATION_STATUS.PLACED;
+      currentApp.statusHistory.push({
+        status: APPLICATION_STATUS.PLACED,
+        changedBy: student._id,
+        remarks: `Offer accepted with ${offer.company.name} at ${offer.packageLPA} LPA`,
+      });
+      await currentApp.save();
+    }
+
+    // 2. Mark student as PLACED in profile
+    await User.findByIdAndUpdate(student._id, {
+      $set: { 'studentProfile.placementStatus': 'PLACED' },
+    });
+
+    // 3. Enforce Institutional One-Offer Policy (BR-06):
+    // Auto-close any other ongoing applications for this student.
+    const activeStatuses = [APPLICATION_STATUS.APPLIED, APPLICATION_STATUS.SHORTLISTED, APPLICATION_STATUS.INTERVIEW, APPLICATION_STATUS.SELECTED];
+    const otherApps = await Application.find({
+      student: student._id,
+      _id: { $ne: offer.application },
+      status: { $in: activeStatuses },
+    });
+
+    for (const app of otherApps) {
+      app.status = APPLICATION_STATUS.REJECTED;
+      app.statusHistory.push({
+        status: APPLICATION_STATUS.REJECTED,
+        changedBy: student._id,
+        remarks: `Auto-closed (BR-06): student accepted an offer from ${offer.company.name}`,
+      });
+      await app.save();
+    }
+
+    // 4. Auto-decline any other pending offers
+    await Offer.updateMany(
+      { student: student._id, _id: { $ne: offer._id }, status: OFFER_STATUS.PENDING },
+      { status: OFFER_STATUS.DECLINED, respondedAt: new Date() }
+    );
+
+    // 5. Congratulatory notification to the student
+    await notify(student._id, {
+      type: 'OFFER',
+      title: 'Congratulations! You are Placed',
+      message: `You accepted the offer from ${offer.company.name} for ${offer.job.title}. Your status is now PLACED.`,
+      link: '/student/offers',
+    });
+  } else if (response === OFFER_STATUS.DECLINED && currentApp) {
+    currentApp.status = APPLICATION_STATUS.REJECTED;
+    currentApp.statusHistory.push({
+      status: APPLICATION_STATUS.REJECTED,
+      changedBy: student._id,
+      remarks: `Offer declined by candidate`,
+    });
+    await currentApp.save();
+  }
 
   await notify(offer.company.user, {
     type: 'OFFER',

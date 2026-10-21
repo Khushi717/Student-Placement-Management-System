@@ -12,6 +12,7 @@ const studentProfileSchema = new mongoose.Schema(
     graduationYear: { type: Number, min: 2000, max: 2100 },
     resumeUrl: { type: String, trim: true },
     skills: [{ type: String, trim: true }],
+    placementStatus: { type: String, enum: ['UNPLACED', 'PLACED'], default: 'UNPLACED' },
   },
   { _id: false }
 );

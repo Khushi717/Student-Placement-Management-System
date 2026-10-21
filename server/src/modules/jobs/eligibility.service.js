@@ -15,6 +15,10 @@ export function checkEligibility(student, job, now = new Date()) {
   if (job.status !== JOB_STATUS.PUBLISHED) reasons.push('This job is not open for applications');
   if (job.deadline && new Date(job.deadline) < now) reasons.push('The application deadline has passed');
 
+  if (profile.placementStatus === 'PLACED') {
+    reasons.push('You are already placed and cannot apply to further drives per institutional policy');
+  }
+
   if (rules.minCgpa > 0) {
     if (profile.cgpa == null) reasons.push('Add your CGPA to your profile to check eligibility');
     else if (profile.cgpa < rules.minCgpa) reasons.push(`Minimum CGPA of ${rules.minCgpa} required (yours: ${profile.cgpa})`);

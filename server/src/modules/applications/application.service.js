@@ -111,3 +111,25 @@ export async function updateStatus(user, id, { status, remarks }) {
   });
   return application;
 }
+
+export async function withdrawApplication(student, id) {
+  const application = await getAuthorizedApplication(student, id);
+  if (![APPLICATION_STATUS.APPLIED, APPLICATION_STATUS.SHORTLISTED].includes(application.status)) {
+    throw ApiError.badRequest('You can only withdraw an application while it is in APPLIED or SHORTLISTED status');
+  }
+  application.status = APPLICATION_STATUS.WITHDRAWN;
+  application.statusHistory.push({
+    status: APPLICATION_STATUS.WITHDRAWN,
+    changedBy: student._id,
+    remarks: 'Application withdrawn by candidate',
+  });
+  await application.save();
+
+  await notify(application.job.company.user, {
+    type: 'APPLICATION',
+    title: 'Application withdrawn',
+    message: `${student.name} withdrew their application for ${application.job.title}.`,
+    link: `/company/applicants?jobId=${application.job._id}`,
+  });
+  return application;
+}

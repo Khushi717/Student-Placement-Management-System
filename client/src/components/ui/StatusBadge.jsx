@@ -6,6 +6,8 @@ const COLORS = {
   SHORTLISTED: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
   INTERVIEW: 'bg-amber-50 text-amber-700 ring-amber-200',
   SELECTED: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  PLACED: 'bg-purple-50 text-purple-700 ring-purple-200',
+  WITHDRAWN: 'bg-slate-100 text-slate-600 ring-slate-200',
   REJECTED: 'bg-red-50 text-red-700 ring-red-200',
   // offers
   PENDING: 'bg-amber-50 text-amber-700 ring-amber-200',
