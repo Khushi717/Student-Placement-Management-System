@@ -80,7 +80,7 @@ describe('jobs', () => {
   test('student only sees eligible jobs when filtering', async () => {
     const { company } = await approvedCompany();
     await api().post('/api/jobs').set(auth(company.token)).send(jobBody()).expect(201);
-    const ineligible = await registerStudent({ studentProfile: { enrollmentNo: 'X1', branch: 'ECE', cgpa: 8, activeBacklogs: 0 } });
+    const ineligible = await registerStudent({ studentProfile: { enrollmentNo: 'X1001', branch: 'ECE', cgpa: 8, activeBacklogs: 0 } });
     const res = await api().get('/api/jobs?eligible=true').set(auth(ineligible.token)).expect(200);
     expect(res.body.data).toHaveLength(0);
   });
@@ -91,17 +91,17 @@ describe('applications', () => {
     const { company } = await approvedCompany();
     const job = (await api().post('/api/jobs').set(auth(company.token)).send(jobBody()).expect(201)).body.data;
     const student = await registerStudent();
-    await api().post('/api/applications').set(auth(student.token)).send({ jobId: job._id }).expect(201);
-    await api().post('/api/applications').set(auth(student.token)).send({ jobId: job._id }).expect(409);
+    await api().post('/api/applications').set(auth(student.token)).send({ jobId: job._id, resumeUrl: 'https://example.com/r.pdf' }).expect(201);
+    await api().post('/api/applications').set(auth(student.token)).send({ jobId: job._id, resumeUrl: 'https://example.com/r.pdf' }).expect(409);
 
-    const lowCgpa = await registerStudent({ studentProfile: { enrollmentNo: 'L1', branch: 'CSE', cgpa: 5, activeBacklogs: 0, resumeUrl: 'https://example.com/r.pdf' } });
-    await api().post('/api/applications').set(auth(lowCgpa.token)).send({ jobId: job._id }).expect(400);
+    const lowCgpa = await registerStudent({ studentProfile: { enrollmentNo: 'L1001', branch: 'CSE', cgpa: 5, activeBacklogs: 0 } });
+    await api().post('/api/applications').set(auth(lowCgpa.token)).send({ jobId: job._id, resumeUrl: 'https://example.com/r.pdf' }).expect(400);
   });
   test('only the owning company can change status; students cannot', async () => {
     const { company } = await approvedCompany();
     const job = (await api().post('/api/jobs').set(auth(company.token)).send(jobBody()).expect(201)).body.data;
     const student = await registerStudent();
-    const app = (await api().post('/api/applications').set(auth(student.token)).send({ jobId: job._id }).expect(201)).body.data;
+    const app = (await api().post('/api/applications').set(auth(student.token)).send({ jobId: job._id, resumeUrl: 'https://example.com/r.pdf' }).expect(201)).body.data;
 
     await api().patch(`/api/applications/${app._id}/status`).set(auth(student.token)).send({ status: 'SHORTLISTED' }).expect(403);
     const stranger = await registerCompany({ company: { name: 'Stranger' } });
@@ -114,7 +114,7 @@ describe('applications', () => {
     const job = (await api().post('/api/jobs').set(auth(company.token)).send(jobBody()).expect(201)).body.data;
     const a = await registerStudent();
     const b = await registerStudent();
-    const app = (await api().post('/api/applications').set(auth(a.token)).send({ jobId: job._id }).expect(201)).body.data;
+    const app = (await api().post('/api/applications').set(auth(a.token)).send({ jobId: job._id, resumeUrl: 'https://example.com/r.pdf' }).expect(201)).body.data;
     await api().get(`/api/applications/${app._id}`).set(auth(b.token)).expect(404);
   });
 });
@@ -127,8 +127,8 @@ describe('interview -> offer flow', () => {
     const job3 = (await api().post('/api/jobs').set(auth(company.token)).send(jobBody({ title: 'Role 3' })).expect(201)).body.data;
 
     const student = await registerStudent();
-    const app1 = (await api().post('/api/applications').set(auth(student.token)).send({ jobId: job1._id }).expect(201)).body.data;
-    const app2 = (await api().post('/api/applications').set(auth(student.token)).send({ jobId: job2._id }).expect(201)).body.data;
+    const app1 = (await api().post('/api/applications').set(auth(student.token)).send({ jobId: job1._id, resumeUrl: 'https://example.com/r.pdf' }).expect(201)).body.data;
+    const app2 = (await api().post('/api/applications').set(auth(student.token)).send({ jobId: job2._id, resumeUrl: 'https://example.com/r.pdf' }).expect(201)).body.data;
 
     // Test student withdrawal on app2
     await api().patch(`/api/applications/${app2._id}/withdraw`).set(auth(student.token)).expect(200);
@@ -154,6 +154,6 @@ describe('interview -> offer flow', () => {
     expect(me.user.studentProfile.placementStatus).toBe('PLACED');
 
     // Verify PLACED student cannot apply to job3 (BR-06)
-    await api().post('/api/applications').set(auth(student.token)).send({ jobId: job3._id }).expect(400);
+    await api().post('/api/applications').set(auth(student.token)).send({ jobId: job3._id, resumeUrl: 'https://example.com/r.pdf' }).expect(400);
   });
 });
