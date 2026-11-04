@@ -33,7 +33,7 @@ export const auth = (token) => ({ Authorization: `Bearer ${token}` });
 export async function registerStudent(over = {}) {
   const res = await api().post('/api/auth/register').send({
     name: 'Asha Verma', email: `asha${Math.random().toString(36).slice(2, 7)}@x.com`, password: 'Passw0rd1', role: 'STUDENT',
-    studentProfile: { enrollmentNo: `E${Math.random().toString(36).slice(2, 9)}`, branch: 'CSE', cgpa: 8.2, activeBacklogs: 0, resumeUrl: 'https://example.com/r.pdf' },
+    studentProfile: { enrollmentNo: `E${Math.random().toString(36).slice(2, 9)}`, branch: 'CSE', cgpa: 8.2, activeBacklogs: 0 },
     ...over,
   });
   return { token: res.body.data.token, user: res.body.data.user, res };
